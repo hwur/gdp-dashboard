@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 st.set_page_config(page_title='Prognoser på svensk ekonomi', page_icon=':bar_chart:')
 
@@ -37,37 +38,56 @@ def load_forecast_from_blocked_excel():
 
     return pd.concat(all_blocks, ignore_index=True)
 
+# Läs in data
 df = load_forecast_from_blocked_excel()
 
-# Rubrik
+# Huvudrubrik
 st.title(":bar_chart: Prognoser på svensk ekonomi")
-st.markdown("Jämför prognoser från olika myndigheter och tillfällen i samma vy.")
+st.markdown("Jämför ekonomiska prognoser från olika svenska myndigheter och propositioner.")
 
 # Välj indikator
 indikatorer = sorted(df["Indikator"].unique())
-vald_indikator = st.selectbox("Välj indikator", indikatorer)
+vald_indikator = st.selectbox("Välj indikator att visa", indikatorer)
 
 # Filtrera på indikator
 df_filtered = df[df["Indikator"] == vald_indikator]
 
 # Välj myndigheter
 myndigheter = sorted(df_filtered["Myndighet"].unique())
-valda_myndigheter = st.multiselect("Välj prognosmakare att jämföra", myndigheter, default=myndigheter)
+valda_myndigheter = st.multiselect("Välj prognosmakare", myndigheter, default=myndigheter)
 
 df_filtered = df_filtered[df_filtered["Myndighet"].isin(valda_myndigheter)]
 
-# Välj årintervall
+# Årsintervall
 år_min, år_max = int(df_filtered["År"].min()), int(df_filtered["År"].max())
-från_år, till_år = st.slider("Välj årintervall", min_value=år_min, max_value=år_max, value=(år_min, år_max))
+från_år, till_år = st.slider("Välj årintervall", år_min, år_max, (år_min, år_max))
 
 df_filtered = df_filtered[(df_filtered["År"] >= från_år) & (df_filtered["År"] <= till_år)]
 
-# Diagram
+# Interaktiv Altair-graf
 st.subheader(f"{vald_indikator} ({från_år}–{till_år})")
-chart_data = df_filtered.pivot(index="År", columns="Myndighet", values="Värde")
-st.line_chart(chart_data)
 
-# Jämförelsetal
+# Y-axeljustering
+y_min = st.number_input("Y-axel: minimum", value=float(df_filtered["Värde"].min()), step=0.1)
+y_max = st.number_input("Y-axel: maximum", value=float(df_filtered["Värde"].max()), step=0.1)
+
+chart_df = df_filtered.copy()
+chart_df["År"] = chart_df["År"].astype(str)  # för att visas som etiketter
+
+chart = alt.Chart(chart_df).mark_line(point=True).encode(
+    x=alt.X("År:O", title="År"),
+    y=alt.Y("Värde:Q", title=vald_indikator, scale=alt.Scale(domain=[y_min, y_max])),
+    color="Myndighet:N",
+    tooltip=["Myndighet", "År", "Värde"]
+).properties(
+    width=700,
+    height=400,
+    title=f"{vald_indikator} från olika prognosmakare"
+).interactive()
+
+st.altair_chart(chart, use_container_width=True)
+
+# Nyckeltalsjämförelse
 st.subheader(f"Utveckling mellan {från_år} och {till_år}")
 cols = st.columns(len(valda_myndigheter))
 
@@ -82,3 +102,4 @@ for i, myndighet in enumerate(valda_myndigheter):
         delta_pct = (delta / start * 100) if start != 0 else 0
         with cols[i]:
             st.metric(label=myndighet, value=f"{end:.2f}", delta=f"{delta_pct:.1f}%")
+
