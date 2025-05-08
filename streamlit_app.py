@@ -72,10 +72,10 @@ y_min = st.number_input("Y-axel: minimum", value=float(df_filtered["Värde"].min
 y_max = st.number_input("Y-axel: maximum", value=float(df_filtered["Värde"].max()), step=0.1)
 
 chart_df = df_filtered.copy()
-chart_df["År"] = chart_df["År"].astype(str)  # för att visas som etiketter
+chart_df["År"] = chart_df["År"].astype(int)  # säkerställ numeriskt
 
 chart = alt.Chart(chart_df).mark_line(point=True).encode(
-    x=alt.X("År:O", title="År"),
+    x=alt.X("År:Q", title="År", scale=alt.Scale(zero=False)),  # Numerisk axel
     y=alt.Y("Värde:Q", title=vald_indikator, scale=alt.Scale(domain=[y_min, y_max])),
     color="Myndighet:N",
     tooltip=["Myndighet", "År", "Värde"]
