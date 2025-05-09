@@ -50,6 +50,8 @@ st.markdown("Jämför ekonomiska prognoser från olika svenska myndigheter och p
 
 # Välj indikator
 indikatorer = sorted(df.columns.unique())
+remove_cols = ["Myndighet_prognosdatum", "År"] # Lägg till fler kolumner att ta bort här om vi vill!
+indikatorer = [col for col in indikatorer if col not in remove_cols]
 vald_indikator = st.selectbox("Välj indikator att visa", indikatorer)
 
 # Filtrera på indikator
