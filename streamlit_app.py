@@ -49,19 +49,25 @@ st.title(":bar_chart: Prognoser på svensk ekonomi")
 st.markdown("Jämför ekonomiska prognoser från olika svenska myndigheter och propositioner.")
 
 # Välj indikator
+# Strip column names
+df.columns = df.columns.str.strip()
+df.columns = df.columns.str.replace(r"%", "procentuell", regex=False).str.replace(r".", "_", regex=False)
 indikatorer = sorted(df.columns.unique())
 remove_cols = ["Myndighet_prognosdatum", "År"] # Lägg till fler kolumner att ta bort här om vi vill!
 indikatorer = [col for col in indikatorer if col not in remove_cols]
 vald_indikator = st.selectbox("Välj indikator att visa", indikatorer)
 
 # Filtrera på indikator
-df = df.loc[:,["Myndighet_prognosdatum","År"] + [vald_indikator]]
+df_filtered = df.loc[:,["Myndighet_prognosdatum","År"] + [vald_indikator]]
+
+# Drop rows with NaN values
+df_filtered = df_filtered.dropna(subset=[vald_indikator])
 
 # Välj myndigheter
-myndigheter = sorted(df["Myndighet_prognosdatum"].unique())
+myndigheter = sorted(df_filtered["Myndighet_prognosdatum"].unique())
 valda_myndigheter = st.multiselect("Välj prognosmakare", myndigheter, default=myndigheter)
 
-df_filtered = df[df["Myndighet_prognosdatum"].isin(valda_myndigheter)]
+df_filtered = df_filtered[df_filtered["Myndighet_prognosdatum"].isin(valda_myndigheter)]
 
 # Årsintervall
 år_min, år_max = int(df_filtered["År"].min()), int(df_filtered["År"].max())
